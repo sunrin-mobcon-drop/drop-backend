@@ -10,3 +10,5 @@ tmp
 package-lock.json
 
 dist
+
+firebase.json

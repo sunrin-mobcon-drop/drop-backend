@@ -68,6 +68,12 @@ export default {
         'PARAMETER_INVALID',
       ),
   },
+  user: {
+    noGroup: (): Error =>
+      returnError(`No group was joined by user`, 400, `NO_GROUP_JOINED`),
+    groupNotJoined: (): Error =>
+      returnError(`Please join group first`, 403, `GROUP_ACCESS_INVALID`),
+  },
   db: {
     create(collection: string | null = null): Error {
       return returnError(
@@ -94,5 +100,8 @@ export default {
         500,
         `DATABASE_PROCESS_FAIL`,
       ),
+  },
+  aws: {
+    S3: (): Error => returnError('Upload to S3 fail', 500, 'S3_UPLOAD_FAIL'),
   },
 };

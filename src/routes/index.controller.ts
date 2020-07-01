@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import Controller from '@lib/blueprint/Controller';
 import welcome from '@src/pages/Welcome';
-import moment from 'moment';
+import moment from 'moment-timezone';
 
 export default new (class extends Controller {
   constructor() {
@@ -14,10 +14,12 @@ export default new (class extends Controller {
   private welcome = this.LegacyWrapper(async (req, res) => {
     res.send(
       welcome(
-        'TS-NODE-EXPRESS-MONGO BACKEND',
-        `${moment().format(
-          'YYYY-MM-DD HH:mm:ss',
-        )}<br/> See api info on <a href="/info"><b>GET /info</b></a>`,
+        'DROP-BACKEND',
+        `${moment()
+          .tz('Asia/Seoul')
+          .format(
+            'YYYY-MM-DD HH:mm:ss',
+          )}<br/> See api info on <a href="/info"><b>GET /info</b></a>`,
       ),
     );
   });

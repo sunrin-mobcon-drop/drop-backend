@@ -124,7 +124,7 @@ async function createToken(
 ): Promise<string> {
   function expireTime(): string | number {
     if (customExpireTime) return customExpireTime;
-    if (tokenType === 'access') return '10min';
+    if (tokenType === 'access') return '365d';
     else if (tokenType === 'refresh') return '1d';
     else return '1h';
   }

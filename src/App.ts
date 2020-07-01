@@ -36,14 +36,14 @@ function App(): express.Express {
     }),
   );
   app.use(helmet());
-  app.use(Assets.apiRateLimiter());
-  app.use(Assets.wrapper(ipfilter));
+  // app.use(Assets.apiRateLimiter());
+  // app.use(Assets.wrapper(ipfilter));
 
   // express-fileupload
   app.use(
     fileUploader({
       limits: { fileSize: 50 * 1024 * 1024 },
-      useTempFiles: true,
+      useTempFiles: false,
       tempFileDir: '/tmp/file/',
       debug: process.env.NODE_ENV === 'development',
     }),

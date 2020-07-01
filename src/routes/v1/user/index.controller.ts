@@ -1,6 +1,7 @@
-import { Request, Response } from 'express';
 import Controller from '@lib/blueprint/Controller';
 import User from '@models/User';
+import Aws from '@util/Aws';
+import moment from 'moment';
 
 export default new (class extends Controller {
   constructor() {
@@ -27,15 +28,28 @@ export default new (class extends Controller {
   }
 
   private createUser = this.Wrapper(async (req, res) => {
-    const { userid, password } = req.body;
-    this.assets.checkNull(userid, password);
+    const { userid, password, name, fcmtoken } = req.body;
+    this.assets.checkNull(userid, password, name);
+    const photo = req.files?.photo as any;
+
     const hashResult = this.auth.password.create(password);
-    const user = await User.create([
-      {
-        userid,
-        ...hashResult,
-      },
-    ]);
+    const userValue = {
+      userid,
+      ...hashResult,
+      name,
+      fcmtoken,
+    };
+    if (photo) {
+      const uploadResult = await Aws.S3({
+        Bucket: 'mocon-drop-cdn',
+        Key: `/bigfiles/${moment().format('YYYY-MM-DD_HH_mm_ss')}_${
+          photo.name
+        }`,
+        Body: photo.data,
+      });
+      Object.assign(userValue, { photo: uploadResult.Location });
+    }
+    const user = await User.create(userValue);
     res(201, user, { message: 'Created user successfully.' });
   });
 
@@ -45,16 +59,14 @@ export default new (class extends Controller {
     const hashResult = password ? this.auth.password.create(password) : null;
     const user = await User.findByIdAndUpdate(req.body.userData._id, {
       $set: { ...hashResult },
-    })
-      .select('userid authority')
-      .exec();
+    }).exec();
     if (!user) throw this.error.db.notfound();
     res(200, user, { message: 'User data update successful' });
   });
 
   private getUser = this.Wrapper(async (req, res) => {
     const { userData } = req.body;
-    const user = await User.findById(userData._id, 'userid authority').exec();
+    const user = await User.findById(userData._id).exec();
     if (!user) throw this.error.db.notfound();
     res(200, user, { message: 'Data found' });
   });
