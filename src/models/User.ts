@@ -1,5 +1,6 @@
 import { model, Schema, Document, HookNextFunction, models } from 'mongoose';
 import error from '@error';
+import Group from './Group';
 
 export interface UserInterface {
   userid: string;
@@ -10,6 +11,7 @@ export interface UserInterface {
   group?: Schema.Types.ObjectId[];
   photo?: string;
   fcmtoken: string;
+  keyword: string[];
 }
 
 const UserSchema = new Schema<UserDocument>({
@@ -18,13 +20,14 @@ const UserSchema = new Schema<UserDocument>({
   password: { type: String, required: true },
   enckey: { type: String, required: true },
   authority: { type: String, default: 'normal' },
-  group: { type: Array, default: [], ref: 'Group' },
+  group: { type: [String], default: [], ref: 'Group' },
   photo: {
     type: String,
     default:
       's3://mocon-drop-cdn//bigfiles/KakaoTalk_Image_2020-06-29-07-50-19.jpeg',
   },
   fcmtoken: { type: String, required: true },
+  keyword: { type: [String], default: [] },
 });
 
 export interface UserDocument extends Document, UserInterface {

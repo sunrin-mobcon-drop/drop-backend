@@ -1,4 +1,3 @@
-import { Request, Response } from 'express';
 import Controller from '@lib/blueprint/Controller';
 import welcome from '@src/pages/Welcome';
 import moment from 'moment-timezone';

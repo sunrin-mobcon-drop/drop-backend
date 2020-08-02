@@ -15,6 +15,8 @@ export default {
       ),
   },
   access: {
+    tooManyRequests: (): Error =>
+      returnError('Too many requests', 429, 'TOO_MANY_REQUESTS'),
     pageNotFound(directory = ''): Error {
       const data: any = {};
       if (directory) {

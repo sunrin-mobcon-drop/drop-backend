@@ -5,7 +5,7 @@ import moment from 'moment';
 import firebase from 'firebase-admin';
 import firebaseCredentials from '../../../firebase.json';
 import mongoose, { Schema } from 'mongoose';
-import { UserDocument } from '@models/User';
+import { UploadedFile } from 'express-fileupload';
 
 firebase.initializeApp({
   credential: firebase.credential.cert(firebaseCredentials as any),
@@ -24,6 +24,8 @@ export default new (class extends Controller {
       this.resolvePost,
     );
     this.router.post('/comment', this.auth.authority.user, this.createComment);
+    this.router.patch('/comment', this.auth.authority.user);
+    this.router.delete('/comment', this.auth.authority.user);
     this.router.delete('/:postid', this.auth.authority.user, this.deletePost);
     this.router.patch('/:postid', this.auth.authority.user, this.updatePost);
   }
@@ -116,8 +118,34 @@ export default new (class extends Controller {
       Object.assign(userData, { photo: r.Location });
     }
 
+    const keywordRegex = new RegExp(
+      '(' + title.toString().replace(/ /g, '|') + ')',
+      'gi',
+    );
+
     const result = await this.models.Post.create(userData);
     if (!result) throw this.error.db.create();
+
+    const keywordTargetUser = await this.models.User.find({
+      keyword: keywordRegex,
+    }).exec();
+
+    if (keywordTargetUser) {
+      keywordTargetUser.forEach(async (user) => {
+        await firebase.messaging().send({
+          notification: { title: `키워드 알림`, body: title },
+          token: user.fcmtoken,
+        });
+      });
+      const noti = new this.models.Noti({
+        targetUser: keywordTargetUser,
+        post: result._id,
+        title: `키워드 알림`,
+        content: title,
+      });
+      await noti.save();
+    }
+
     res(201, result);
   });
 
@@ -197,7 +225,7 @@ export default new (class extends Controller {
         1,
       );
     }
-    const noti = await this.models.Noti.create({
+    await this.models.Noti.create({
       targetUser: userList._id,
       ...commentData,
       post: post._id,
@@ -215,7 +243,43 @@ export default new (class extends Controller {
     res(200, newPost);
   });
 
-  private updatePost = this.Wrapper(async (req, res) => {});
+  private updatePost = this.Wrapper(async (req, res) => {
+    const { title, description, type, time, place, reward, group } = req.body;
+    const photo = req.files?.photo as UploadedFile;
+    const { postid } = req.params;
+
+    const newDoc = {};
+
+    if (photo) {
+      const r = await Aws.S3({
+        Bucket: 'mocon-drop-cdn',
+        Key: `/bigfiles/${moment().format('YYYY-MM-DD_HH_mm_ss')}_${
+          photo.name
+        }`,
+        Body: photo.data,
+      });
+      Object.assign(newDoc, { photo: r.Location });
+    }
+
+    Object.assign(
+      newDoc,
+      this.assets.updateQueryBuilder({
+        title,
+        description,
+        type,
+        time,
+        place,
+        reward,
+        group,
+      }),
+    );
+
+    const post = await this.models.Post.findByIdAndUpdate(postid, {
+      $set: newDoc,
+    });
+    if (!post) throw this.error.db.notfound();
+    res(200, post);
+  });
 
   private getNoti = this.Wrapper(async (req, res) => {
     const noti = await this.models.Noti.find({

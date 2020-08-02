@@ -2,6 +2,7 @@ import Controller from '@lib/blueprint/Controller';
 import User from '@models/User';
 import Aws from '@util/Aws';
 import moment from 'moment';
+import { UploadedFile } from 'express-fileupload';
 
 export default new (class extends Controller {
   constructor() {
@@ -28,7 +29,7 @@ export default new (class extends Controller {
   }
 
   private createUser = this.Wrapper(async (req, res) => {
-    const { userid, password, name, fcmtoken } = req.body;
+    const { userid, password, name, fcmtoken, keyword } = req.body;
     this.assets.checkNull(userid, password, name);
     const photo = req.files?.photo as any;
 
@@ -38,6 +39,7 @@ export default new (class extends Controller {
       ...hashResult,
       name,
       fcmtoken,
+      keyword,
     };
     if (photo) {
       const uploadResult = await Aws.S3({
@@ -49,16 +51,38 @@ export default new (class extends Controller {
       });
       Object.assign(userValue, { photo: uploadResult.Location });
     }
-    const user = await User.create(userValue);
+    const user = new User(userValue);
+    await user.save();
     res(201, user, { message: 'Created user successfully.' });
   });
 
   private updateUser = this.Wrapper(async (req, res) => {
-    const { password } = req.body;
+    const { password, name, keyword } = req.body;
+    const photo = req.files?.photo as UploadedFile;
+    const newDoc = {};
+    if (photo) {
+      const uploadResult = await Aws.S3({
+        Bucket: 'mocon-drop-cdn',
+        Key: `/bigfiles/${moment().format('YYYY-MM-DD_HH_mm_ss')}_${
+          photo.name
+        }`,
+        Body: photo.data,
+      });
+      Object.assign(newDoc, { photo: uploadResult.Location });
+    }
+    if (password) {
+      const hashResult = password ? this.auth.password.create(password) : null;
+      Object.assign(newDoc, hashResult);
+    }
+    if (name) {
+      Object.assign(newDoc, { name });
+    }
+    if (keyword) {
+      Object.assign(newDoc, { keyword });
+    }
 
-    const hashResult = password ? this.auth.password.create(password) : null;
     const user = await User.findByIdAndUpdate(req.body.userData._id, {
-      $set: { ...hashResult },
+      $set: newDoc,
     }).exec();
     if (!user) throw this.error.db.notfound();
     res(200, user, { message: 'User data update successful' });
