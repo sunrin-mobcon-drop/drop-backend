@@ -25,7 +25,11 @@ export default new (class extends Controller {
     );
     this.router.post('/comment', this.auth.authority.user, this.createComment);
     this.router.patch('/comment', this.auth.authority.user);
-    this.router.delete('/comment', this.auth.authority.user);
+    this.router.delete(
+      '/comment/:postid/:commentindex',
+      this.auth.authority.user,
+      this.deleteComment,
+    );
     this.router.delete('/:postid', this.auth.authority.user, this.deletePost);
     this.router.patch('/:postid', this.auth.authority.user, this.updatePost);
   }
@@ -91,6 +95,21 @@ export default new (class extends Controller {
       .sort('-_id')
       .exec();
     res(200, { ...result, count });
+  });
+
+  private deleteComment = this.Wrapper(async (req, res) => {
+    const { postid, commentindex } = req.params;
+    const legacyPost = await this.models.Post.findById(postid).exec();
+    if (!legacyPost) throw this.error.db.notfound();
+
+    const newComment = legacyPost.comment?.splice(
+      parseInt(commentindex, 10),
+      1,
+    );
+    const newPost = await this.models.Post.findByIdAndUpdate(postid, {
+      $set: { comment: newComment },
+    }).exec();
+    res(200, newPost as any);
   });
 
   private createPost = this.Wrapper(async (req, res) => {

@@ -13,14 +13,12 @@ export interface PostInterface {
   time: string;
   place: string;
   reward?: string;
-  comment?: [
-    {
-      user: Schema.Types.ObjectId;
-      time: string;
-      content: string;
-      isImportant: boolean;
-    },
-  ];
+  comment?: {
+    user: Schema.Types.ObjectId;
+    time: string;
+    content: string;
+    isImportant: boolean;
+  }[];
   group: Schema.Types.ObjectId;
   uploadTime?: string;
 }
