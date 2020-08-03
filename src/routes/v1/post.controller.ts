@@ -106,13 +106,16 @@ export default new (class extends Controller {
     const legacyPost = await this.models.Post.findById(postid).exec();
     if (!legacyPost) throw this.error.db.notfound();
 
-    const newComment = legacyPost.comment?.splice(
-      parseInt(commentindex, 10),
-      1,
-    );
+    legacyPost.comment?.splice(parseInt(commentindex, 10), 1);
+
+    const newComment = legacyPost.comment;
+
     const newPost = await this.models.Post.findByIdAndUpdate(postid, {
-      $set: { comment: newComment },
+      comment: newComment,
     }).exec();
+
+    console.log(legacyPost.comment, newComment, newPost);
+
     res(200, newPost as any);
   });
 
