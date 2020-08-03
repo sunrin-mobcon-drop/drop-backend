@@ -1,7 +1,9 @@
-import { model, Schema, Document } from 'mongoose';
+import { model, Schema, Document, HookNextFunction } from 'mongoose';
 import moment from 'moment-timezone';
 import User from './User';
 import Group from './Group';
+import error from '@error';
+import models from '.';
 
 export interface PostInterface {
   title: string;
@@ -74,6 +76,20 @@ export interface PostDocument extends Document, PostInterface {
 //     },
 //   );
 // });
+
+PostSchema.pre('remove', function (next: HookNextFunction): void {
+  const doc = this as PostDocument;
+
+  models.Noti.remove(
+    {
+      post: doc._id,
+    },
+    (err: Error) => {
+      if (err) next(err);
+      next();
+    },
+  );
+});
 
 const Post = model<PostDocument>('Post', PostSchema);
 
